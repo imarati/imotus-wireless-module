@@ -1,0 +1,129 @@
+########################
+# Общие вещи
+########################
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Логи
+*.log
+
+# Бинарники / сборки
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+*.elf
+*.hex
+*.map
+*.o
+*.obj
+
+# Кэш и временные файлы
+*.tmp
+*.temp
+*.swp
+*.swo
+
+########################
+# IDE / редакторы
+########################
+
+# JetBrains (CLion, IntelliJ, Android Studio и др.)
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Eclipse/STM32CubeIDE/mbed (Eclipse‑подобные)
+*.launch
+.settings/
+.metadata/
+Debug/
+Release/
+
+# Xcode
+xcuserdata/
+*.xcworkspace/
+DerivedData/
+*.xcuserstate
+
+########################
+# Flutter / Dart (mobile_app)
+########################
+
+**/mobile_app/.dart_tool/
+**/mobile_app/.packages
+**/mobile_app/.flutter-plugins
+**/mobile_app/.flutter-plugins-dependencies
+**/mobile_app/.flutter-plugins-dependencies
+**/mobile_app/build/
+**/mobile_app/.pub-cache/
+**/mobile_app/.pub/
+**/mobile_app/ios/Flutter/Flutter.framework
+**/mobile_app/ios/Flutter/Flutter.podspec
+**/mobile_app/ios/Flutter/Generated.xcconfig
+**/mobile_app/ios/Runner.xcworkspace/
+**/mobile_app/android/.gradle/
+**/mobile_app/android/app/build/
+**/mobile_app/android/app/intermediates/
+**/mobile_app/android/app/outputs/
+
+# APK / AAB
+**/mobile_app/**/*.apk
+**/mobile_app/**/*.aab
+
+########################
+# Arduino / STM / C/C++
+########################
+
+# Общие build‑каталоги
+build/
+cmake-build-*/
+out/
+
+# Arduino
+*.arduino_build*/
+*.arduino_output*/
+*.eep
+*.lst
+
+# STM32CubeIDE / прочие Eclipse‑подобные
+# (частично уже выше, но на всякий случай)
+*/Debug/
+*/Release/
+*.uvgui.*
+*.uvoptx
+*.uvprojx
+
+########################
+# Mbed Studio
+########################
+
+# Mbed кэш и сборка
+mbed-os-build/
+.mbed/
+*.bmdaas
+
+########################
+# Секреты / конфиги
+########################
+
+*.env
+*.env.*
+*.pem
+*.key
+*.crt
+*.p12
+.keystore
+.jks
+*.cer
+
+# Локальные настройки пользователя
+*.local.*
+*.user
