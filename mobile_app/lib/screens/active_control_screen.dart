@@ -1,0 +1,243 @@
+import 'package:flutter/material.dart';
+import 'package:mobile_app/protocol/request/form16_active_cmd.dart';
+import 'package:mobile_app/protocol/request/form18_request_active_settings.dart';
+
+import '../services/tcp_service.dart';
+import '../states/stm_state.dart';
+import '../widgets/control_ui/control_action_button.dart';
+import '../widgets/control_ui/control_angle_track.dart';
+import '../widgets/control_ui/control_header.dart';
+import '../widgets/control_ui/control_info_box.dart';
+import '../widgets/control_ui/control_load_scale.dart';
+import 'active_settings_screen.dart';
+
+class ActiveControlScreen extends StatefulWidget {
+  final TcpService tcp;
+
+  const ActiveControlScreen({super.key, required this.tcp});
+
+  @override
+  State<ActiveControlScreen> createState() => _ActiveControlScreenState();
+}
+
+class _ActiveControlScreenState extends State<ActiveControlScreen> {
+  double angle = 0;
+  double weight = 0;
+  int elapsedSeconds = 0;
+  int doneCycles = 0;
+
+  bool running = false;
+
+  int flexionAngle = 0;
+  int assistFlexionAngle = 10;
+  int assistExtensionAngle = 80;
+  int extensionAngle = 100;
+
+  double flexionLoad = 3;
+  double extensionLoad = 10;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromState();
+    stmState.addListener(_onStateChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.tcp.sendForm(Form18RequestActiveSettings());
+    });
+  }
+
+  void _syncFromState() {
+    angle = (stmState.angle ?? 0).toDouble();
+    weight = (stmState.load ?? 0).toDouble();
+    elapsedSeconds = stmState.elapsedSeconds ?? 0;
+    doneCycles = stmState.doneCycles ?? 0;
+
+    flexionAngle = stmState.bendAngle ?? 0;
+    assistFlexionAngle = stmState.activeBendAssistAngle ?? 10;
+    assistExtensionAngle = stmState.activeExpAssistAngle ?? 80;
+    extensionAngle = stmState.expAngle ?? 100;
+
+    flexionLoad = (stmState.activeBendLoad ?? -3).abs().toDouble();
+    extensionLoad = (stmState.activeExpLoad ?? 3).abs().toDouble();
+  }
+
+  void _onStateChanged() {
+    if (!mounted) return;
+    setState(_syncFromState);
+  }
+
+  @override
+  void dispose() {
+    stmState.removeListener(_onStateChanged);
+    super.dispose();
+  }
+
+  String _formatTime(int totalSec) {
+    final min = totalSec ~/ 60;
+    final sec = totalSec % 60;
+    return '${min.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
+  }
+
+  void _toggleRunPause() {
+    if (running) {
+      widget.tcp.sendForm(Form16ActiveCmd(Form16ActiveCmd.pause));
+      setState(() => running = false);
+    } else {
+      widget.tcp.sendForm(Form16ActiveCmd(Form16ActiveCmd.start));
+      setState(() => running = true);
+    }
+  }
+
+  void _stop() {
+    widget.tcp.sendForm(Form16ActiveCmd(Form16ActiveCmd.stop));
+    setState(() => running = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: SafeArea(
+        child: Column(
+          children: [
+            ControlHeader(
+              title: 'Активный режим',
+              onBack: () => Navigator.pop(context),
+              onSettings: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ActiveSettingsScreen(tcp: widget.tcp),
+                  ),
+                );
+              },
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ControlInfoBox(
+                            child: Text(
+                              '$doneCycles',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ControlInfoBox(
+                            child: Text(
+                              _formatTime(elapsedSeconds),
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ControlActionButton(
+                          icon: running ? Icons.pause : Icons.play_arrow,
+                          onTap: _toggleRunPause,
+                        ),
+                        const SizedBox(width: 12),
+                        ControlActionButton(
+                          icon: Icons.stop,
+                          onTap: _stop,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF1FF),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.square_foot,
+                                          size: 80,
+                                          color: Colors.blue,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          angle.toStringAsFixed(0),
+                                          style: const TextStyle(
+                                            fontSize: 44,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  ControlLoadScale(
+                                    currentLoad: weight.abs(),
+                                    bottomLabel:
+                                    '${weight.abs().toStringAsFixed(0)} кг',
+                                    markerAValue: extensionLoad,
+                                    markerAIcon: Icons.north_east,
+                                    markerALabel:
+                                    extensionLoad.toStringAsFixed(0),
+                                    markerBValue: flexionLoad,
+                                    markerBIcon: Icons.south_west,
+                                    markerBLabel: flexionLoad.toStringAsFixed(0),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ControlAngleTrack(
+                            currentAngle: angle,
+                            marks: [
+                              ControlAngleMark(
+                                value: flexionAngle.toDouble(),
+                                icon: Icons.south_west,
+                                dark: true,
+                              ),
+                              ControlAngleMark(
+                                value: assistFlexionAngle.toDouble(),
+                                icon: Icons.south_west,
+                              ),
+                              ControlAngleMark(
+                                value: assistExtensionAngle.toDouble(),
+                                icon: Icons.north_east,
+                              ),
+                              ControlAngleMark(
+                                value: extensionAngle.toDouble(),
+                                icon: Icons.north_east,
+                                dark: true,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
