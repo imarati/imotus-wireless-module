@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../protocol/request/form4_set_target_angle.dart';
 import '../protocol/request/form5_manual_cmd.dart';
-import '../protocol/request/form13_request_manual_settings.dart';
+import '../protocol/request/form11_request_manual_settings.dart';
 import '../services/tcp_service.dart';
 import '../states/stm_state.dart';
 import '../widgets/control_ui/control_action_button.dart';
@@ -36,7 +36,7 @@ class _ManualControlScreenState extends State<ManualControlScreen> {
     super.initState();
     targetController = TextEditingController(text: '0');
 
-    widget.tcp.sendForm(Form13RequestManualSettings());
+    widget.tcp.sendForm(Form11RequestManualSettings());
 
     _syncFromState();
     stmState.addListener(_onStmStateChanged);
@@ -184,7 +184,7 @@ class _ManualControlScreenState extends State<ManualControlScreen> {
                                               icon: Icons.remove,
                                               onStart: () {
                                                 widget.tcp
-                                                    .sendForm(Form5ManualCmd(1));
+                                                    .sendForm(Form5ManualCmd(2));
                                               },
                                               onStop: () {
                                                 widget.tcp
@@ -196,7 +196,7 @@ class _ManualControlScreenState extends State<ManualControlScreen> {
                                               icon: Icons.add,
                                               onStart: () {
                                                 widget.tcp
-                                                    .sendForm(Form5ManualCmd(2));
+                                                    .sendForm(Form5ManualCmd(1));
                                               },
                                               onStop: () {
                                                 widget.tcp

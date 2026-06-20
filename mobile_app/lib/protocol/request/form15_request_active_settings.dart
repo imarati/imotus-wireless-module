@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 import '../abstract/form.dart';
 
-class Form18RequestActiveSettings extends Form {
+class Form15RequestActiveSettings extends Form {
   @override
-  int get formId => 18;
+  int get formId => 15;
 
   @override
   Uint8List encodePayload() {

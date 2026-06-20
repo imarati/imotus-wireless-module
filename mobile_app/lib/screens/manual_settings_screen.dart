@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-import '../protocol/request/form6_update_manual_settings.dart';
+import '../protocol/form6_manual_settings.dart';
 import '../services/tcp_service.dart';
 import '../states/stm_state.dart';
 
 class ManualSettingsScreen extends StatefulWidget {
   final int maxWeight;
-  final int speed; // fallback, если пока нет manualSpeed в stmState
+  final int speed;
   final void Function(int) onMaxWeightChanged;
   final void Function(int) onSpeedChanged;
   final TcpService tcp;
@@ -21,7 +22,7 @@ class ManualSettingsScreen extends StatefulWidget {
   });
 
   @override
-  State createState() => _ManualSettingsScreenState();
+  State<ManualSettingsScreen> createState() => _ManualSettingsScreenState();
 }
 
 class _ManualSettingsScreenState extends State<ManualSettingsScreen> {
@@ -33,15 +34,17 @@ class _ManualSettingsScreenState extends State<ManualSettingsScreen> {
     super.initState();
 
     final initialMax =
-    (stmState.maxLoad != null ? stmState.maxLoad! : widget.maxWeight);
+    (stmState.maxLoad != null ? stmState.maxLoad! : widget.maxWeight)
+        .clamp(0, 1000);
     final initialManualSpeed =
-    (stmState.manualSpeed != null ? stmState.manualSpeed! : widget.speed);
+    (stmState.manualSpeed != null ? stmState.manualSpeed! : widget.speed)
+        .clamp(0, 100);
 
     maxWeightController = TextEditingController(
-      text: initialMax.toStringAsFixed(0),
+      text: initialMax.toString(),
     );
     speedController = TextEditingController(
-      text: initialManualSpeed.toStringAsFixed(0),
+      text: initialManualSpeed.toString(),
     );
   }
 
@@ -53,22 +56,21 @@ class _ManualSettingsScreenState extends State<ManualSettingsScreen> {
   }
 
   void _saveAndSend() {
-    final maxW = int.tryParse(maxWeightController.text) ?? widget.maxWeight;
+    final maxW =
+    (int.tryParse(maxWeightController.text) ?? widget.maxWeight).clamp(0, 1000);
     final spdRaw = int.tryParse(speedController.text) ?? widget.speed;
     final manualSpd = spdRaw.clamp(0, 100);
 
     widget.onMaxWeightChanged(maxW);
     widget.onSpeedChanged(manualSpd);
 
-    // Отправляем Form 6 с manualSpeed
     widget.tcp.sendForm(
-      Form6UpdateManualSettings(
+      Form6ManualSettings(
         maxLoad: maxW,
         manualSpeed: manualSpd,
       ),
     );
 
-    // Локально обновляем состояние (до прихода Form 11 от STM)
     stmState.maxLoad = maxW;
     stmState.manualSpeed = manualSpd;
     stmState.notifyListeners();
@@ -108,7 +110,6 @@ class _ManualSettingsScreenState extends State<ManualSettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 32),
-
                 const Text(
                   'Максимальная нагрузка (кг)',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -117,15 +118,16 @@ class _ManualSettingsScreenState extends State<ManualSettingsScreen> {
                 TextField(
                   controller: maxWeightController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   style: const TextStyle(fontSize: 24),
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.fitness_center),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 const Text(
                   'Скорость (%)',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -134,6 +136,9 @@ class _ManualSettingsScreenState extends State<ManualSettingsScreen> {
                 TextField(
                   controller: speedController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   style: const TextStyle(fontSize: 24),
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
@@ -141,9 +146,7 @@ class _ManualSettingsScreenState extends State<ManualSettingsScreen> {
                     suffixText: '%',
                   ),
                 ),
-
                 const SizedBox(height: 32),
-
                 SizedBox(
                   width: double.infinity,
                   height: 48,

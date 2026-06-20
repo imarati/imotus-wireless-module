@@ -1,4 +1,3 @@
-// lib/screens/connect_screen.dart
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -32,7 +31,6 @@ class _ConnectScreenState extends State<ConnectScreen> {
   void dispose() {
     ipCtrl.dispose();
     portCtrl.dispose();
-    // tcp.dispose();  // БОЛЬШЕ НЕ РВЁМ СОЕДИНЕНИЕ ПРИ УХОДЕ С ЭКРАНА
     super.dispose();
   }
 
@@ -87,7 +85,6 @@ class _ConnectScreenState extends State<ConnectScreen> {
 
       tcp.sendForm(Form7RequestInit());
 
-      // Если ответ успел прийти очень быстро — проверяем сразу
       if (stmState.status != null) {
         return true;
       }

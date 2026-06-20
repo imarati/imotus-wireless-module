@@ -5,7 +5,7 @@ class Form1SyncTime extends Form {
   @override
   int get formId => 1;
 
-  final int timestamp; // u32
+  final int timestamp;
 
   Form1SyncTime(this.timestamp);
 

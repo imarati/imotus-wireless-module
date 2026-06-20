@@ -5,7 +5,6 @@ class Form9PassiveCmd extends Form {
   @override
   int get formId => 9;
 
-  /// 0 = STOP, 1 = START/CONTINUE, 2 = PAUSE
   final int cmd;
 
   Form9PassiveCmd(this.cmd);

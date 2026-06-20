@@ -3,24 +3,41 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import '../protocol/abstract/form.dart';
-import '../protocol/response/form20_system_settings.dart';
+import '../protocol/form39_passive_functions.dart';
+import '../protocol/form6_manual_settings.dart';
+import '../protocol/form8_passive_settings.dart';
+import '../protocol/form13_active_settings.dart';
+import '../protocol/form17_system_settings.dart';
+import '../protocol/form18_patient_info.dart';
+import '../protocol/form19_session_datetime.dart';
+import '../protocol/form23_active_procedures.dart';
+import '../protocol/form24_active_warmup_settings.dart';
+import '../protocol/form27_active_cooldown_settings.dart';
+import '../protocol/form30_passive_procedures.dart';
+import '../protocol/form32_passive_warmup_settings.dart';
+import '../protocol/form34_passive_cooldown_settings.dart';
+import '../protocol/form36_passive_comfort_settings.dart';
+import '../protocol/form38_active_comfort_settings.dart';
 import '../protocol/response/form2_status.dart';
 import '../protocol/response/form3_initial_state.dart';
-import '../protocol/response/form10_training_status.dart';
-import '../protocol/response/form11_manual_settings.dart';
-import '../protocol/response/form12_passive_settings.dart';
-import '../protocol/response/form17_active_settings.dart';
+import '../protocol/response/form10_passive_training_status.dart';
+import '../protocol/response/form20_active_training_status.dart';
 import '../states/stm_state.dart';
 
 class TcpService {
   Socket? _socket;
+
   bool get isConnected => _socket != null;
 
   void Function(Object error)? onDisconnect;
 
-  Future connect(String ip, int port) async {
+  Future<void> connect(String ip, int port) async {
     _socket?.destroy();
-    _socket = await Socket.connect(ip, port, timeout: const Duration(seconds: 5));
+    _socket = await Socket.connect(
+      ip,
+      port,
+      timeout: const Duration(seconds: 5),
+    );
     _startListening();
   }
 
@@ -35,18 +52,22 @@ class TcpService {
 
         while (true) {
           final sofIndex = buffer.indexOf(0xAA);
+
           if (sofIndex < 0) {
             buffer.clear();
             break;
           }
+
           if (sofIndex > 0) {
             buffer = buffer.sublist(sofIndex);
           }
+
           if (buffer.length < 4) break;
 
           final formId = buffer[1];
           final len = buffer[2];
           final frameLen = 1 + 1 + 1 + len + 1;
+
           if (buffer.length < frameLen) break;
 
           final payload = Uint8List.fromList(buffer.sublist(3, 3 + len));
@@ -59,8 +80,22 @@ class TcpService {
             calc ^= b;
           }
 
+          final rxHex = buffer
+              .sublist(0, frameLen)
+              .map((e) => e.toRadixString(16).padLeft(2, '0'))
+              .join(' ');
+
+          if (formId != 2) {
+            developer.log('RX CRC $calc');
+            developer.log('RX FORM $formId: $rxHex');
+          }
+
           if (calc == crc) {
             _routeIncoming(formId, payload);
+          } else {
+            developer.log(
+              'RX CRC ERROR formId=$formId len=$len calc=$calc recv=$crc',
+            );
           }
 
           buffer = buffer.sublist(frameLen);
@@ -88,7 +123,7 @@ class TcpService {
         if (payload.length >= Form2Status.payloadLength) {
           final f2 = Form2Status.fromPayload(payload);
           stmState.updateFromForm2(
-            timestamp: f2.timestamp,
+            dateTime: f2.dateTime,
             angle: f2.angle,
             load: f2.load,
             status: f2.status,
@@ -105,9 +140,35 @@ class TcpService {
         }
         break;
 
+      case 6:
+        if (payload.length >= Form6ManualSettings.payloadLength) {
+          final f6 = Form6ManualSettings.fromPayload(payload);
+          stmState.updateFromForm6(
+            maxLoad: f6.maxLoad,
+            manualSpeed: f6.manualSpeed,
+          );
+        }
+        break;
+
+      case 8:
+        if (payload.length >= Form8PassiveSettings.payloadLength) {
+          final f8 = Form8PassiveSettings.fromPayload(payload);
+          stmState.updateFromForm8(
+            cycles: f8.cycles,
+            durationMin: f8.durationMin,
+            stopByCycles: f8.stopByCycles,
+            stopByTime: f8.stopByTime,
+            speed: f8.speed,
+            maxLoad: f8.maxLoad,
+            bendAngle: f8.bendAngle,
+            expAngle: f8.expAngle,
+          );
+        }
+        break;
+
       case 10:
-        if (payload.length >= Form10TrainingStatus.payloadLength) {
-          final f10 = Form10TrainingStatus.fromPayload(payload);
+        if (payload.length >= Form10PassiveTrainingStatus.payloadLength) {
+          final f10 = Form10PassiveTrainingStatus.fromPayload(payload);
           stmState.updateFromForm10(
             elapsedSeconds: f10.elapsedSeconds,
             doneCycles: f10.doneCycles,
@@ -116,80 +177,198 @@ class TcpService {
         }
         break;
 
-      case 11:
-        if (payload.length >= Form11ManualSettings.payloadLength) {
-          final f11 = Form11ManualSettings.fromPayload(payload);
-          stmState.updateFromForm11(
-            maxLoad: f11.maxLoad,
-            manualSpeed: f11.manualSpeed,
-            status: f11.status,
-          );
-        }
-        break;
-
-      case 12:
-        if (payload.length >= Form12PassiveSettings.payloadLength) {
-          final f12 = Form12PassiveSettings.fromPayload(payload);
-          stmState.updateFromForm12(
-            cycles: f12.cycles,
-            durationMin: f12.durationMin,
-            stopByCycles: f12.stopByCycles,
-            stopByTime: f12.stopByTime,
-            speed: f12.speed,
-            maxLoad: f12.maxLoad,
-            bendAngle: f12.bendAngle,
-            expAngle: f12.expAngle,
-            status: f12.status,
+      case 13:
+        if (payload.length >= Form13ActiveSettings.payloadLength) {
+          final f13 = Form13ActiveSettings.fromPayload(payload);
+          stmState.updateFromForm13(
+            cycles: f13.cycles,
+            durationMin: f13.durationMin,
+            stopByCycles: f13.stopByCycles,
+            stopByTime: f13.stopByTime,
+            speed: f13.speed,
+            maxLoad: f13.maxLoad,
+            bendAngle: f13.bendAngle,
+            expAngle: f13.expAngle,
+            bendAssistAngle: f13.bendAssistAngle,
+            expAssistAngle: f13.expAssistAngle,
+            bendLoad: f13.bendLoad,
+            expLoad: f13.expLoad,
           );
         }
         break;
 
       case 17:
-        if (payload.length >= Form17ActiveSettings.payloadLength) {
-          final f17 = Form17ActiveSettings.fromPayload(payload);
+        if (payload.length >= Form17SystemSettings.payloadLength) {
+          final f17 = Form17SystemSettings.fromPayload(payload);
           stmState.updateFromForm17(
-            cycles: f17.bendAngle == null ? f17.cycles : f17.cycles,
+            speed: f17.speed,
+            bendPauseSec: f17.bendPauseSec,
+            expPauseSec: f17.expPauseSec,
+            pauseOnBend: f17.pauseOnBend,
+            pauseOnExp: f17.pauseOnExp,
+            cycles: f17.cycles,
             durationMin: f17.durationMin,
             stopByCycles: f17.stopByCycles,
             stopByTime: f17.stopByTime,
-            speed: f17.speed,
             maxLoad: f17.maxLoad,
-            bendAngle: f17.bendAngle,
-            expAngle: f17.expAngle,
-            bendAssistAngle: f17.bendAssistAngle,
-            expAssistAngle: f17.expAssistAngle,
-            bendLoad: f17.bendLoad,
-            expLoad: f17.expLoad,
-            status: f17.status,
+            bendMaxLoad: f17.bendMaxLoad,
+            expMaxLoad: f17.expMaxLoad,
+            reverseOnLoad: f17.reverseOnLoad,
+            stopOnLoad: f17.stopOnLoad,
+          );
+        }
+        break;
+
+      case 18:
+        if (payload.length >= Form18PatientInfo.payloadLength) {
+          final rawHex = payload
+              .map((e) => e.toRadixString(16).padLeft(2, '0'))
+              .join(' ');
+          developer.log('RX18 RAW PAYLOAD: $rawHex');
+
+          final f18 = Form18PatientInfo.fromPayload(payload);
+          stmState.updateFromForm18(
+            surname: f18.surname,
+            name: f18.name,
+            patronymic: f18.patronymic,
+            patientId: f18.patientId,
+          );
+        }
+        break;
+
+      case 19:
+        if (payload.length >= Form19SessionDateTime.payloadLength) {
+          final f19 = Form19SessionDateTime.fromPayload(payload);
+          stmState.updateFromForm19(
+            sessionDate: f19.sessionDate,
+            sessionTime: TimeOfDayData(
+              hour: f19.hour,
+              minute: f19.minute,
+              second: f19.second,
+            ),
           );
         }
         break;
 
       case 20:
-        if (payload.length >= Form20SystemSettings.payloadLength) {
-          final f20 = Form20SystemSettings.fromPayload(payload);
+        if (payload.length >= Form20ActiveTrainingStatus.payloadLength) {
+          final f20 = Form20ActiveTrainingStatus.fromPayload(payload);
           stmState.updateFromForm20(
-            maxLoad: f20.maxLoad,
-            speed: f20.speed,
-            cycles: f20.cycles,
-            durationMin: f20.durationMin,
-            stopByCycles: f20.stopByCycles,
-            stopByTime: f20.stopByTime,
-            bendAngle: f20.bendAngle,
-            expAngle: f20.expAngle,
+            elapsedSeconds: f20.elapsedSeconds,
+            doneCycles: f20.doneCycles,
             status: f20.status,
           );
         }
         break;
 
+      case 23:
+        if (payload.length >= Form23ActiveProcedures.payloadLength) {
+          final f23 = Form23ActiveProcedures.fromPayload(payload);
+          stmState.updateFromForm23(
+            warmupEnabled: f23.warmupEnabled,
+            cooldownEnabled: f23.cooldownEnabled,
+            comfortEnabled: f23.comfortEnabled,
+          );
+        }
+        break;
+
+      case 24:
+        if (payload.length >= Form24ActiveWarmupSettings.payloadLength) {
+          final f24 = Form24ActiveWarmupSettings.fromPayload(payload);
+          stmState.updateFromForm24(
+            warmupStep: f24.step,
+          );
+        }
+        break;
+
+      case 27:
+        if (payload.length >= Form27ActiveCooldownSettings.payloadLength) {
+          final f27 = Form27ActiveCooldownSettings.fromPayload(payload);
+          stmState.updateFromForm27(
+            cooldownStep: f27.step,
+          );
+        }
+        break;
+
+      case 30:
+        if (payload.length >= Form30PassiveProcedures.payloadLength) {
+          final f30 = Form30PassiveProcedures.fromPayload(payload);
+          stmState.updateFromForm30(
+            warmupEnabled: f30.warmupEnabled,
+            cooldownEnabled: f30.cooldownEnabled,
+            comfortEnabled: f30.comfortEnabled,
+          );
+        }
+        break;
+
+      case 32:
+        if (payload.length >= Form32PassiveWarmupSettings.payloadLength) {
+          final f32 = Form32PassiveWarmupSettings.fromPayload(payload);
+          stmState.updateFromForm32(
+            warmupStep: f32.step,
+          );
+        }
+        break;
+
+      case 34:
+        if (payload.length >= Form34PassiveCooldownSettings.payloadLength) {
+          final f34 = Form34PassiveCooldownSettings.fromPayload(payload);
+          stmState.updateFromForm34(
+            cooldownStep: f34.step,
+          );
+        }
+        break;
+
+      case 36:
+        if (payload.length >= Form36PassiveComfortSettings.payloadLength) {
+          final f36 = Form36PassiveComfortSettings.fromPayload(payload);
+          stmState.updateFromForm36(
+            comfortStep: f36.step,
+            comfortBendDeviation: f36.bendDeviation,
+            comfortExpDeviation: f36.expDeviation,
+          );
+        }
+        break;
+
+      case 38:
+        if (payload.length >= Form38ActiveComfortSettings.payloadLength) {
+          final f38 = Form38ActiveComfortSettings.fromPayload(payload);
+          stmState.updateFromForm38(
+            comfortStep: f38.step,
+            comfortBendDeviation: f38.bendDeviation,
+            comfortExpDeviation: f38.expDeviation,
+          );
+        }
+        break;
+
+      case 39:
+        if (payload.length == Form39PassiveFunctions.payloadLength) {
+          final f39 = Form39PassiveFunctions.fromPayload(payload);
+          stmState.updatePassiveFunctions(
+            extendBendEnabled: f39.extendBendEnabled,
+            extendExpEnabled: f39.extendExpEnabled,
+            extendRepeats: f39.extendRepeats,
+          );
+        }
+        break;
+
       default:
+        developer.log(
+          'RX UNKNOWN FORM: formId=$formId payloadLen=${payload.length}',
+        );
         break;
     }
   }
 
   void sendForm(Form form) {
+    if (_socket == null) {
+      developer.log('TX SKIPPED: socket is not connected, formId=${form.formId}');
+      return;
+    }
+
     final payload = form.encodePayload();
     final length = payload.length;
+
     final bytes = Uint8List(4 + length);
     final b = bytes.buffer.asByteData();
 
@@ -207,12 +386,14 @@ class TcpService {
     for (int i = 0; i < length; i++) {
       crc ^= payload[i];
     }
+
     b.setUint8(3 + length, crc);
 
     final hex = bytes.map((e) => e.toRadixString(16).padLeft(2, '0')).join(' ');
+    developer.log('TX FORM CRC: $crc');
     developer.log('TX FORM ${form.formId}: $hex');
 
-    _socket?.add(bytes);
+    _socket!.add(bytes);
   }
 
   void dispose() {

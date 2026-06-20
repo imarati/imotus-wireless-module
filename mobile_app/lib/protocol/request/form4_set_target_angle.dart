@@ -5,7 +5,7 @@ class Form4SetTargetAngle extends Form {
   @override
   int get formId => 4;
 
-  final int targetAngle; // i16
+  final int targetAngle;
 
   Form4SetTargetAngle(this.targetAngle);
 

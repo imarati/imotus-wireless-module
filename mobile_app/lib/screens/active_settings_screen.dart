@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../protocol/request/form15_update_active_settings.dart';
+import '../protocol/form13_active_settings.dart';
 import '../services/tcp_service.dart';
 import '../states/stm_state.dart';
 
@@ -64,10 +64,10 @@ class _ActiveSettingsScreenState extends State<ActiveSettingsScreen> {
     );
 
     bendLoadController = TextEditingController(
-      text: (stmState.activeBendLoad ?? -3).toString(),
+      text: ((stmState.activeBendLoad ?? 0) < 0 ? 0 : (stmState.activeBendLoad ?? 0)).toString(),
     );
     expLoadController = TextEditingController(
-      text: (stmState.activeExpLoad ?? 3).toString(),
+      text: ((stmState.activeExpLoad ?? 0) < 0 ? 0 : (stmState.activeExpLoad ?? 0)).toString(),
     );
 
     stopByCycles = stmState.stopByCycles;
@@ -111,10 +111,10 @@ class _ActiveSettingsScreenState extends State<ActiveSettingsScreen> {
     final expAssistAngle =
     _parseInt(expAssistAngleController, 80).clamp(-180, 180);
 
-    final bendLoad = _parseInt(bendLoadController, -3).clamp(-1000, 1000);
-    final expLoad = _parseInt(expLoadController, 3).clamp(-1000, 1000);
+    final bendLoad = _parseInt(bendLoadController, 0).clamp(0, 1000);
+    final expLoad = _parseInt(expLoadController, 0).clamp(0, 1000);
 
-    stmState.updateFromForm17(
+    stmState.updateFromForm13(
       cycles: cycles,
       durationMin: durationMin,
       stopByCycles: stopByCycles,
@@ -127,11 +127,10 @@ class _ActiveSettingsScreenState extends State<ActiveSettingsScreen> {
       expAssistAngle: expAssistAngle,
       bendLoad: bendLoad,
       expLoad: expLoad,
-      status: stmState.status ?? 0,
     );
 
     widget.tcp.sendForm(
-      Form15UpdateActiveSettings(
+      Form13ActiveSettings(
         cycles: cycles,
         durationMin: durationMin,
         stopByCycles: stopByCycles,
@@ -376,7 +375,7 @@ class _ActiveSettingsScreenState extends State<ActiveSettingsScreen> {
                   fromLabel: 'Сгибание',
                   toLabel: 'Разгибание',
                   suffix: 'кг',
-                  allowNegative: true,
+                  allowNegative: false,
                 ),
                 const SizedBox(height: 32),
 

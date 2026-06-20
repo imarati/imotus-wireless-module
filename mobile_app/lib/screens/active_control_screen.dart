@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_app/protocol/request/form16_active_cmd.dart';
-import 'package:mobile_app/protocol/request/form18_request_active_settings.dart';
+import 'package:mobile_app/protocol/request/form14_active_cmd.dart';
+import 'package:mobile_app/protocol/request/form15_request_active_settings.dart';
+import 'package:mobile_app/protocol/request/form16_request_system_settings.dart';
+import 'package:mobile_app/protocol/request/form25_request_active_procedures.dart';
+import 'package:mobile_app/protocol/request/form26_request_active_warmup_settings.dart';
+import 'package:mobile_app/protocol/request/form28_request_active_cooldown_settings.dart';
+import 'package:mobile_app/protocol/request/form29_request_active_comfort_settings.dart';
 
 import '../services/tcp_service.dart';
 import '../states/stm_state.dart';
@@ -9,6 +14,7 @@ import '../widgets/control_ui/control_angle_track.dart';
 import '../widgets/control_ui/control_header.dart';
 import '../widgets/control_ui/control_info_box.dart';
 import '../widgets/control_ui/control_load_scale.dart';
+import 'active_procedure_screen.dart';
 import 'active_settings_screen.dart';
 
 class ActiveControlScreen extends StatefulWidget {
@@ -21,20 +27,20 @@ class ActiveControlScreen extends StatefulWidget {
 }
 
 class _ActiveControlScreenState extends State<ActiveControlScreen> {
-  double angle = 0;
-  double weight = 0;
+  double currentAngle = 0;
+  double currentLoad = 0;
   int elapsedSeconds = 0;
   int doneCycles = 0;
 
   bool running = false;
 
-  int flexionAngle = 0;
-  int assistFlexionAngle = 10;
-  int assistExtensionAngle = 80;
-  int extensionAngle = 100;
+  int bendAngle = 0;
+  int bendAssistAngle = 10;
+  int expAssistAngle = 80;
+  int expAngle = 100;
 
-  double flexionLoad = 3;
-  double extensionLoad = 10;
+  double bendLoad = 3;
+  double expLoad = 10;
 
   @override
   void initState() {
@@ -43,23 +49,24 @@ class _ActiveControlScreenState extends State<ActiveControlScreen> {
     stmState.addListener(_onStateChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      widget.tcp.sendForm(Form18RequestActiveSettings());
+      widget.tcp.sendForm(Form15RequestActiveSettings());
     });
   }
 
   void _syncFromState() {
-    angle = (stmState.angle ?? 0).toDouble();
-    weight = (stmState.load ?? 0).toDouble();
-    elapsedSeconds = stmState.elapsedSeconds ?? 0;
-    doneCycles = stmState.doneCycles ?? 0;
+    currentAngle = (stmState.angle ?? 0).toDouble();
+    currentLoad = (stmState.load ?? 0).toDouble();
 
-    flexionAngle = stmState.bendAngle ?? 0;
-    assistFlexionAngle = stmState.activeBendAssistAngle ?? 10;
-    assistExtensionAngle = stmState.activeExpAssistAngle ?? 80;
-    extensionAngle = stmState.expAngle ?? 100;
+    elapsedSeconds = stmState.activeElapsedSeconds ?? 0;
+    doneCycles = stmState.activeDoneCycles ?? 0;
 
-    flexionLoad = (stmState.activeBendLoad ?? -3).abs().toDouble();
-    extensionLoad = (stmState.activeExpLoad ?? 3).abs().toDouble();
+    bendAngle = stmState.bendAngle ?? 0;
+    bendAssistAngle = stmState.activeBendAssistAngle ?? 10;
+    expAssistAngle = stmState.activeExpAssistAngle ?? 80;
+    expAngle = stmState.expAngle ?? 100;
+
+    bendLoad = (stmState.activeBendLoad ?? -3).toDouble();
+    expLoad = (stmState.activeExpLoad ?? 3).toDouble();
   }
 
   void _onStateChanged() {
@@ -81,17 +88,26 @@ class _ActiveControlScreenState extends State<ActiveControlScreen> {
 
   void _toggleRunPause() {
     if (running) {
-      widget.tcp.sendForm(Form16ActiveCmd(Form16ActiveCmd.pause));
+      widget.tcp.sendForm(Form14ActiveCmd(Form14ActiveCmd.pause));
       setState(() => running = false);
     } else {
-      widget.tcp.sendForm(Form16ActiveCmd(Form16ActiveCmd.start));
+      widget.tcp.sendForm(Form14ActiveCmd(Form14ActiveCmd.start));
       setState(() => running = true);
     }
   }
 
   void _stop() {
-    widget.tcp.sendForm(Form16ActiveCmd(Form16ActiveCmd.stop));
+    widget.tcp.sendForm(Form14ActiveCmd(Form14ActiveCmd.stop));
     setState(() => running = false);
+  }
+
+  void _openProcedures() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ActiveProcedureScreen(tcp: widget.tcp),
+      ),
+    );
   }
 
   @override
@@ -105,6 +121,7 @@ class _ActiveControlScreenState extends State<ActiveControlScreen> {
             ControlHeader(
               title: 'Активный режим',
               onBack: () => Navigator.pop(context),
+              onProcedures: _openProcedures,
               onSettings: () {
                 Navigator.push(
                   context,
@@ -179,7 +196,7 @@ class _ActiveControlScreenState extends State<ActiveControlScreen> {
                                         ),
                                         const SizedBox(height: 12),
                                         Text(
-                                          angle.toStringAsFixed(0),
+                                          currentAngle.toStringAsFixed(0),
                                           style: const TextStyle(
                                             fontSize: 44,
                                             fontWeight: FontWeight.bold,
@@ -189,16 +206,14 @@ class _ActiveControlScreenState extends State<ActiveControlScreen> {
                                     ),
                                   ),
                                   ControlLoadScale(
-                                    currentLoad: weight.abs(),
-                                    bottomLabel:
-                                    '${weight.abs().toStringAsFixed(0)} кг',
-                                    markerAValue: extensionLoad,
-                                    markerAIcon: Icons.north_east,
-                                    markerALabel:
-                                    extensionLoad.toStringAsFixed(0),
-                                    markerBValue: flexionLoad,
-                                    markerBIcon: Icons.south_west,
-                                    markerBLabel: flexionLoad.toStringAsFixed(0),
+                                    currentLoad: currentLoad.abs(),
+                                    bottomLabel: '${currentLoad.abs().toStringAsFixed(0)} кг',
+                                    markerAValue: bendLoad,
+                                    markerAIcon:  Icons.south_west,
+                                    markerALabel: bendLoad.toStringAsFixed(0),
+                                    markerBValue: expLoad,
+                                    markerBIcon:  Icons.north_east,
+                                    markerBLabel: expLoad.toStringAsFixed(0),
                                   ),
                                 ],
                               ),
@@ -206,26 +221,22 @@ class _ActiveControlScreenState extends State<ActiveControlScreen> {
                           ),
                           const SizedBox(height: 8),
                           ControlAngleTrack(
-                            currentAngle: angle,
+                            currentAngle: currentAngle,
                             marks: [
                               ControlAngleMark(
-                                value: flexionAngle.toDouble(),
-                                icon: Icons.south_west,
-                                dark: true,
-                              ),
+                                  value: bendAngle.toDouble(),
+                                  icon: Icons.south_west,
+                                  dark: true),
                               ControlAngleMark(
-                                value: assistFlexionAngle.toDouble(),
-                                icon: Icons.south_west,
-                              ),
+                                  value: bendAssistAngle.toDouble(),
+                                  icon: Icons.south_west),
                               ControlAngleMark(
-                                value: assistExtensionAngle.toDouble(),
-                                icon: Icons.north_east,
-                              ),
+                                  value: expAssistAngle.toDouble(),
+                                  icon: Icons.north_east),
                               ControlAngleMark(
-                                value: extensionAngle.toDouble(),
-                                icon: Icons.north_east,
-                                dark: true,
-                              ),
+                                  value: expAngle.toDouble(),
+                                  icon: Icons.north_east,
+                                  dark: true),
                             ],
                           ),
                         ],

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../protocol/request/form8_update_passive_settings.dart';
+import '../protocol/form8_passive_settings.dart';
 import '../services/tcp_service.dart';
 import '../states/stm_state.dart';
 
@@ -75,7 +75,7 @@ class _PassiveSettingsScreenState extends State<PassiveSettingsScreen> {
     final bendAngle = _parseInt(bendAngleController, -10).clamp(-180, 180);
     final expAngle = _parseInt(expAngleController, 120).clamp(-180, 180);
 
-    stmState.updateFromForm12(
+    stmState.updateFromForm8(
       cycles: cycles,
       durationMin: durationMin,
       stopByCycles: stopByCycles,
@@ -84,11 +84,10 @@ class _PassiveSettingsScreenState extends State<PassiveSettingsScreen> {
       maxLoad: maxLoad,
       bendAngle: bendAngle,
       expAngle: expAngle,
-      status: stmState.status ?? 0,
     );
 
     widget.tcp.sendForm(
-      Form8UpdatePassiveSettings(
+      Form8PassiveSettings(
         cycles: cycles,
         durationMin: durationMin,
         stopByCycles: stopByCycles,
@@ -234,12 +233,11 @@ class _PassiveSettingsScreenState extends State<PassiveSettingsScreen> {
                         controller: bendAngleController,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'^-?\d*')),
+                          FilteringTextInputFormatter.allow(RegExp(r'^-?\d*')),
                         ],
                         style: const TextStyle(fontSize: 24),
                         decoration: const InputDecoration(
-                          labelText: 'Нижний',
+                          labelText: 'Сгибание',
                           suffixText: '°',
                           border: OutlineInputBorder(),
                         ),
@@ -251,12 +249,11 @@ class _PassiveSettingsScreenState extends State<PassiveSettingsScreen> {
                         controller: expAngleController,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'^-?\d*')),
+                          FilteringTextInputFormatter.allow(RegExp(r'^-?\d*')),
                         ],
                         style: const TextStyle(fontSize: 24),
                         decoration: const InputDecoration(
-                          labelText: 'Верхний',
+                          labelText: 'Разгибание',
                           suffixText: '°',
                           border: OutlineInputBorder(),
                         ),
